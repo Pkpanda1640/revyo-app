@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { askClaude } from "../../../lib/anthropic";
+import { askGemini } from "../../../lib/gemini";
 
 // Only ratings of 4 or 5 should ever reach this route — it's the one that
 // produces a review meant for Google. Enforced again here server-side, not
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   let reviewText;
   try {
-    reviewText = await askClaude(prompt);
+    reviewText = await askGemini(prompt);
   } catch (e) {
     return res.status(500).json({ error: "Could not generate a review right now." });
   }

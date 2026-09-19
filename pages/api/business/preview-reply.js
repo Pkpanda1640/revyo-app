@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getSession } from "../../../lib/session";
-import { askClaude } from "../../../lib/anthropic";
+import { askGemini } from "../../../lib/gemini";
 
 export default async function handler(req, res) {
   const session = getSession(req);
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   const { sampleReview } = req.body || {};
   if (!sampleReview || !sampleReview.trim()) return res.status(400).json({ error: "Paste a sample review first." });
 
-  const reply = await askClaude(
+  const reply = await askGemini(
     `You are the owner of "${client.business_name}" replying to a Google review. Review: "${sampleReview}". Write a short, warm, professional reply (1-2 sentences). Return ONLY the reply text.`
   );
   return res.status(200).json({ reply });

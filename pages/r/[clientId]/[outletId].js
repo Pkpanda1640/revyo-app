@@ -160,7 +160,12 @@ export default function CustomerReviewPage() {
         </>
       )}
 
-      {stage === "error" && <p style={{ color: "var(--danger)" }}>Something went wrong generating your review. Please try again.</p>}
+      {stage === "error" && (
+        <>
+          <p style={{ color: "var(--danger)", marginBottom: 14 }}>Something went wrong generating your review.</p>
+          <Button variant="primary" onClick={() => setStage("generating")}>Try again</Button>
+        </>
+      )}
 
       {stage === "positive-review" && (
         <>

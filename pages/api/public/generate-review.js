@@ -26,7 +26,13 @@ export default async function handler(req, res) {
   try {
     reviewText = await askGemini(prompt);
   } catch (e) {
-    return res.status(500).json({ error: "Could not generate a review right now." });
+    // One retry after a short pause — covers transient errors and brief rate-limit blips.
+    try {
+      await new Promise((r) => setTimeout(r, 1500));
+      reviewText = await askGemini(prompt);
+    } catch (e2) {
+      return res.status(500).json({ error: "Could not generate a review right now." });
+    }
   }
 
   await supabaseAdmin.from("reviews").insert({

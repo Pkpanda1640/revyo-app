@@ -155,8 +155,23 @@ export default function CustomerReviewPage() {
 
       {stage === "generating" && (
         <>
-          <h2 className="display" style={{ fontSize: 22, margin: "0 0 10px" }}>One moment…</h2>
+          <div className="spinner" />
+          <h2 className="display" style={{ fontSize: 22, margin: "16px 0 10px" }}>One moment…</h2>
           <p style={{ color: "var(--muted)", fontSize: 14 }}>Writing a review draft for you.</p>
+          <style jsx>{`
+            .spinner {
+              width: 34px;
+              height: 34px;
+              margin: 0 auto;
+              border: 3px solid var(--line);
+              border-top-color: var(--primary);
+              border-radius: 50%;
+              animation: spin 0.7s linear infinite;
+            }
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
         </>
       )}
 

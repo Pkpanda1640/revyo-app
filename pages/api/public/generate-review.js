@@ -10,8 +10,10 @@ export default async function handler(req, res) {
   if (!clientId || !outletId || !rating) return res.status(400).json({ error: "Missing fields." });
   if (rating < 4) return res.status(400).json({ error: "This endpoint is only for ratings of 4 or 5." });
 
-  const { data: client } = await supabaseAdmin.from("clients").select("*").eq("id", clientId).maybeSingle();
-  const { data: outlet } = await supabaseAdmin.from("outlets").select("*").eq("id", outletId).eq("client_id", clientId).maybeSingle();
+  const [{ data: client }, { data: outlet }] = await Promise.all([
+    supabaseAdmin.from("clients").select("*").eq("id", clientId).maybeSingle(),
+    supabaseAdmin.from("outlets").select("*").eq("id", outletId).eq("client_id", clientId).maybeSingle(),
+  ]);
   if (!client || !outlet) return res.status(404).json({ error: "Not found." });
 
   const languages = client.languages || ["English"];
@@ -26,9 +28,10 @@ export default async function handler(req, res) {
   try {
     reviewText = await askGemini(prompt);
   } catch (e) {
-    // One retry after a short pause — covers transient errors and brief rate-limit blips.
+    // One quick retry — covers transient errors and brief rate-limit blips
+    // without adding much wait time.
     try {
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 400));
       reviewText = await askGemini(prompt);
     } catch (e2) {
       return res.status(500).json({ error: "Could not generate a review right now." });

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button, Field, Badge, SettingRow } from "../../components/ui";
 import { api } from "../../lib/api";
+import { PLAN_LABELS, isPlanActive } from "../../lib/planStatus";
 
 const CATEGORIES = ["Restaurant & Cafe", "Medical, Pharmacy & Clinic", "Retail & Shop", "Salon & Spa", "Home Services", "Other"];
 const LANGUAGES = ["English", "Hindi", "Marathi"];
@@ -39,7 +40,7 @@ export default function BusinessDashboard() {
 
   if (!client) return <div style={{ padding: 60, textAlign: "center", color: "var(--muted)" }}>Loading…</div>;
 
-  const isPremium = client.plan === "premium";
+  const isPremium = isPlanActive(client);
   const navItems = [
     ["outlets", "Outlets", Store],
     ["ai", "AI settings", Settings],
@@ -55,7 +56,7 @@ export default function BusinessDashboard() {
           <div style={{ fontSize: 13, color: "var(--primary)", fontWeight: 700 }}>Revyo</div>
           <div style={{ fontWeight: 700, fontSize: 15, marginTop: 2 }}>{client.business_name}</div>
           <div style={{ marginTop: 8 }}>
-            <Badge tone={isPremium ? "premium" : "muted"}>{isPremium ? "PREMIUM ACTIVE" : "FREE PLAN"}</Badge>
+            <Badge tone={isPremium ? "premium" : "muted"}>{(PLAN_LABELS[client.plan] || client.plan).toUpperCase()}{isPremium ? " ACTIVE" : ""}</Badge>
           </div>
         </div>
         {navItems.map(([key, label, Icon]) => (
@@ -72,7 +73,7 @@ export default function BusinessDashboard() {
         {tab === "ai" && <AiSettingsTab client={client} updateClient={updateClient} isPremium={isPremium} goBilling={() => setTab("billing")} />}
         {tab === "leads" && <LeadsTab isPremium={isPremium} leadGenEnabled={client.lead_gen_enabled} goBilling={() => setTab("billing")} />}
         {tab === "reviews" && <ReviewsTab />}
-        {tab === "billing" && <BillingTab isPremium={isPremium} />}
+        {tab === "billing" && <BillingTab client={client} isPremium={isPremium} />}
       </div>
     </div>
   );
@@ -428,7 +429,7 @@ function ReviewsTab() {
 }
 
 // --- Billing ---
-function BillingTab({ isPremium }) {
+function BillingTab({ client, isPremium }) {
   const features = [
     ["QR review collection", true],
     ["AI-generated reviews", true],
@@ -438,36 +439,37 @@ function BillingTab({ isPremium }) {
     ["Active lead generation", false],
     ["Custom form per category", false],
   ];
+  const planName = PLAN_LABELS[client.plan] || client.plan;
+  const expiresLabel = client.plan_expires_at
+    ? `${isPremium ? "Renews" : "Expired"} ${new Date(client.plan_expires_at).toLocaleDateString()}`
+    : client.plan === "lifetime"
+    ? "Never expires"
+    : null;
+
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div style={{ maxWidth: 560 }}>
       <h2 className="display" style={{ fontSize: 22, marginBottom: 4 }}>Subscription</h2>
       <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 22 }}>
-        Your plan is managed by your Revyo account manager. To change it, get in touch with them directly.
+        Your plan is managed by your Revyo account manager. To change or renew it, get in touch with them directly.
       </p>
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-        <div className="surface-card" style={{ flex: "1 1 240px", padding: 22, opacity: isPremium ? 0.55 : 1 }}>
-          <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600, marginBottom: 4 }}>Free</div>
-          <div className="display" style={{ fontSize: 26, marginBottom: 16 }}>₹0</div>
-          {features.map(([label, free]) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 8, color: free ? "var(--ink)" : "#B4B9C1" }}>
-              <CheckCircle2 size={14} color={free ? "var(--success)" : "#D1D5DB"} /> {label}
-            </div>
-          ))}
-          {!isPremium && <Badge tone="muted">CURRENT PLAN</Badge>}
-        </div>
-        <div style={{ flex: "1 1 240px", background: "var(--ink)", color: "#fff", borderRadius: 10, padding: 22 }}>
-          <Badge tone="premium">PREMIUM</Badge>
-          <div className="display" style={{ fontSize: 26, margin: "10px 0 16px" }}>
-            ₹999<span style={{ fontSize: 14, fontWeight: 500 }}>/month</span>
-          </div>
-          {features.map(([label]) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 8 }}>
-              <CheckCircle2 size={14} color="#8FD6A8" /> {label}
-            </div>
-          ))}
-          {isPremium && <Badge tone="success">CURRENT PLAN</Badge>}
-        </div>
+      <div style={{ background: isPremium ? "var(--ink)" : "var(--surface)", color: isPremium ? "#fff" : "var(--ink)", border: isPremium ? "none" : "1px solid var(--line)", borderRadius: 10, padding: 24, marginBottom: 20 }}>
+        <Badge tone={isPremium ? "premium" : "muted"}>{planName.toUpperCase()} PLAN</Badge>
+        {expiresLabel && (
+          <div style={{ fontSize: 13, marginTop: 12, color: isPremium ? "#C7CBD4" : "var(--muted)" }}>{expiresLabel}</div>
+        )}
+        {!isPremium && client.plan !== "free" && (
+          <div style={{ fontSize: 13, marginTop: 6, color: "var(--danger)" }}>Your plan has lapsed — premium features are paused until it's renewed.</div>
+        )}
       </div>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>What's included</div>
+      {features.map(([label, freeFeature]) => {
+        const included = freeFeature || isPremium;
+        return (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 8, color: included ? "var(--ink)" : "#B4B9C1" }}>
+            <CheckCircle2 size={14} color={included ? "var(--success)" : "#D1D5DB"} /> {label}
+          </div>
+        );
+      })}
     </div>
   );
 }

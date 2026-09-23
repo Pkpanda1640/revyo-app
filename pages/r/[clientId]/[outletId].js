@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Copy, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { Button, Centered, StarRating } from "../../../components/ui";
 import { api } from "../../../lib/api";
 
@@ -68,11 +68,11 @@ export default function CustomerReviewPage() {
     setBusy(false);
     setStage("negative-thanks");
   }
-  function copyReview() {
-    navigator.clipboard.writeText(reviewText).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+  function copyAndGo() {
+    navigator.clipboard.writeText(reviewText).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+    if (googleLink) window.open(googleLink, "_blank", "noopener,noreferrer");
   }
 
   if (info === undefined) {
@@ -187,14 +187,9 @@ export default function CustomerReviewPage() {
           <h2 className="display" style={{ fontSize: 22, margin: "0 0 8px" }}>Here's a review you can post</h2>
           <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>Edit it if you'd like — it's yours.</p>
           <textarea className="input" style={{ minHeight: 110, marginBottom: 14 }} value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Button variant="ghost" onClick={copyReview} style={{ flex: 1 }}>
-              <Copy size={14} /> {copied ? "Copied" : "Copy"}
-            </Button>
-            <Button variant="dark" href={googleLink || "#"} target="_blank" style={{ flex: 1 }}>
-              <ExternalLink size={14} /> Continue to Google
-            </Button>
-          </div>
+          <Button variant="dark" style={{ width: "100%" }} onClick={copyAndGo}>
+            <ExternalLink size={14} /> {copied ? "Copied — opening Google…" : "Copy & Continue to Google"}
+          </Button>
           {!googleLink && <p style={{ fontSize: 12, color: "var(--danger)", marginTop: 10 }}>This outlet hasn't connected a Google review link yet.</p>}
         </>
       )}

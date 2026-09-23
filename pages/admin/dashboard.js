@@ -3,6 +3,9 @@ import { useRouter } from "next/router";
 import { Plus, CheckCircle2, Copy, ArrowLeft } from "lucide-react";
 import { Button, Field, Badge } from "../../components/ui";
 import { api } from "../../lib/api";
+import { PLAN_LABELS, isPlanActive } from "../../lib/planStatus";
+
+const PLAN_OPTIONS = ["free", "monthly", "quarterly", "yearly", "lifetime"];
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -24,8 +27,8 @@ export default function AdminDashboard() {
       router.push("/admin/login");
     }
   }
-  async function togglePlan(id) {
-    await api.post("/api/admin/toggle-plan", { id });
+  async function changePlan(id, plan) {
+    await api.post("/api/admin/set-plan", { id, plan });
     load();
   }
   async function logout() {
@@ -76,7 +79,7 @@ export default function AdminDashboard() {
   }
 
   const total = clients ? clients.length : 0;
-  const premiumCount = clients ? clients.filter((c) => c.plan === "premium").length : 0;
+  const premiumCount = clients ? clients.filter((c) => isPlanActive(c)).length : 0;
   const totalOutlets = Object.values(counts).reduce((a, b) => a + b, 0);
 
   return (
@@ -95,7 +98,7 @@ export default function AdminDashboard() {
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 30, flexWrap: "wrap" }}>
-        {[["Businesses", total], ["Premium", premiumCount], ["Outlets", totalOutlets]].map(([label, val]) => (
+        {[["Businesses", total], ["Paying now", premiumCount], ["Outlets", totalOutlets]].map(([label, val]) => (
           <div key={label} className="surface-card" style={{ flex: "1 1 140px", padding: "16px 18px" }}>
             <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>{label}</div>
             <div className="display" style={{ fontSize: 26 }}>{val}</div>
@@ -114,12 +117,22 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>{c.owner_email || "no email"} · {c.owner_phone || "no phone"}</div>
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>
                   {counts[c.id] || 0} outlet(s) · joined {new Date(c.created_at).toLocaleDateString()}
+                  {c.plan_expires_at && c.plan !== "lifetime" && (
+                    <> · {isPlanActive(c) ? "renews" : "expired"} {new Date(c.plan_expires_at).toLocaleDateString()}</>
+                  )}
                 </div>
               </div>
-              <Badge tone={c.plan === "premium" ? "premium" : "muted"}>{c.plan === "premium" ? "PREMIUM" : "FREE"}</Badge>
-              <Button variant="ghost" style={{ padding: "7px 14px", fontSize: 13 }} onClick={() => togglePlan(c.id)}>
-                {c.plan === "premium" ? "Set to free" : "Set to premium"}
-              </Button>
+              <Badge tone={isPlanActive(c) ? "premium" : "muted"}>{PLAN_LABELS[c.plan] || c.plan}</Badge>
+              <select
+                className="input"
+                style={{ width: "auto", padding: "6px 10px", fontSize: 13 }}
+                value={c.plan}
+                onChange={(e) => changePlan(c.id, e.target.value)}
+              >
+                {PLAN_OPTIONS.map((p) => (
+                  <option key={p} value={p}>{PLAN_LABELS[p]}</option>
+                ))}
+              </select>
             </div>
           ))}
       </div>
@@ -131,7 +144,7 @@ function NewBusinessForm({ onCancel, onCreated }) {
   const [businessName, setBusinessName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
-  const [plan, setPlan] = useState("premium");
+  const [plan, setPlan] = useState("monthly");
   const [passcode, setPasscode] = useState(() => String(Math.floor(100000 + Math.random() * 900000)));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -166,25 +179,12 @@ function NewBusinessForm({ onCancel, onCreated }) {
       <Field label="Owner contact number">
         <input className="input" value={ownerPhone} onChange={(e) => setOwnerPhone(e.target.value)} />
       </Field>
-      <Field label="Plan">
-        <div style={{ display: "flex", gap: 8 }}>
-          {["free", "premium"].map((p) => (
-            <button
-              key={p}
-              onClick={() => setPlan(p)}
-              className="btn"
-              style={{
-                flex: 1,
-                textTransform: "capitalize",
-                border: `1px solid ${plan === p ? "var(--primary)" : "var(--line)"}`,
-                background: plan === p ? "var(--primary-soft)" : "#fff",
-                color: plan === p ? "var(--primary)" : "var(--ink)",
-              }}
-            >
-              {p}
-            </button>
+      <Field label="Plan" hint="Monthly/quarterly/yearly auto-expire on that schedule — you'll renew them manually here when the client pays again. Lifetime never expires.">
+        <select className="input" value={plan} onChange={(e) => setPlan(e.target.value)}>
+          {["free", "monthly", "quarterly", "yearly", "lifetime"].map((p) => (
+            <option key={p} value={p} style={{ textTransform: "capitalize" }}>{p[0].toUpperCase() + p.slice(1)}</option>
           ))}
-        </div>
+        </select>
       </Field>
       <Field label="Passcode" hint="Auto-generated — edit if you'd rather set your own.">
         <input className="input" style={{ fontFamily: "monospace" }} value={passcode} onChange={(e) => setPasscode(e.target.value)} />

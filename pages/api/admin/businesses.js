@@ -1,6 +1,9 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getSession } from "../../../lib/session";
+import { planExpiryFromNow } from "../../../lib/planStatus";
 import bcrypt from "bcryptjs";
+
+const VALID_PLANS = ["free", "monthly", "quarterly", "yearly", "lifetime"];
 
 function slugify(name) {
   return name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -29,13 +32,15 @@ export default async function handler(req, res) {
     const { data: existing } = await supabaseAdmin.from("clients").select("id").eq("id", id).maybeSingle();
     if (existing) return res.status(409).json({ error: "A business with this name already exists." });
     const passcodeHash = await bcrypt.hash(passcode, 10);
+    const finalPlan = VALID_PLANS.includes(plan) ? plan : "free";
     const { error } = await supabaseAdmin.from("clients").insert({
       id,
       business_name: businessName.trim(),
       passcode_hash: passcodeHash,
       owner_email: (ownerEmail || "").trim(),
       owner_phone: (ownerPhone || "").trim(),
-      plan: plan === "premium" ? "premium" : "free",
+      plan: finalPlan,
+      plan_expires_at: planExpiryFromNow(finalPlan),
     });
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ businessName: businessName.trim(), passcode });

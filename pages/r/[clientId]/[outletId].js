@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { ExternalLink } from "lucide-react";
 import { Button, Centered, StarRating } from "../../../components/ui";
 import { api } from "../../../lib/api";
@@ -77,21 +78,29 @@ export default function CustomerReviewPage() {
 
   if (info === undefined) {
     return (
-      <Centered>
-        <p style={{ color: "var(--muted)" }}>Loading…</p>
-      </Centered>
+      <>
+        <Head><meta name="referrer" content="no-referrer" /></Head>
+        <Centered>
+          <p style={{ color: "var(--muted)" }}>Loading…</p>
+        </Centered>
+      </>
     );
   }
   if (info === null) {
     return (
-      <Centered>
-        <p>This link isn't valid.</p>
-      </Centered>
+      <>
+        <Head><meta name="referrer" content="no-referrer" /></Head>
+        <Centered>
+          <p>This link isn't valid.</p>
+        </Centered>
+      </>
     );
   }
 
   return (
-    <Centered maxWidth={400}>
+    <>
+      <Head><meta name="referrer" content="no-referrer" /></Head>
+      <Centered maxWidth={400}>
       <div style={{ fontSize: 13, color: "var(--primary)", fontWeight: 700, marginBottom: 6 }}>{info.outlet.name}</div>
 
       {stage === "rate" && (
@@ -193,6 +202,7 @@ export default function CustomerReviewPage() {
           {!googleLink && <p style={{ fontSize: 12, color: "var(--danger)", marginTop: 10 }}>This outlet hasn't connected a Google review link yet.</p>}
         </>
       )}
-    </Centered>
+      </Centered>
+    </>
   );
 }

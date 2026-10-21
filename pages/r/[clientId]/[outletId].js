@@ -194,7 +194,7 @@ export default function CustomerReviewPage() {
       {stage === "positive-review" && (
         <>
           <h2 className="display" style={{ fontSize: 22, margin: "0 0 8px" }}>Here's a review you can post</h2>
-          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>Edit it if you'd like — it's yours.</p>
+          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>Make it your own — change a few words or add a detail from your visit before you post.</p>
           <textarea className="input" style={{ minHeight: 110, marginBottom: 14 }} value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
           <Button variant="dark" style={{ width: "100%" }} onClick={copyAndGo}>
             <ExternalLink size={14} /> {copied ? "Copied — opening Google…" : "Copy & Continue to Google"}

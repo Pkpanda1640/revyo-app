@@ -397,7 +397,7 @@ function ReviewsTab() {
     <div style={{ maxWidth: 560 }}>
       <h2 className="display" style={{ fontSize: 22, marginBottom: 4 }}>All reviews</h2>
       <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 18 }}>
-        Every rating from your QR codes lands here. 4–5 star ones were also sent to Google; 3 and under stayed private.
+        Every rating from your QR codes lands here. For 4–5 stars, this shows the review text we wrote for the customer — Revyo can't see whether they went on to post it on Google. Ratings of 3 or below stay private and never reach Google.
       </p>
       {reviews === null && <p style={{ color: "var(--muted)" }}>Loading…</p>}
       {reviews && reviews.length === 0 && <p style={{ color: "var(--muted)" }}>Nothing here yet.</p>}
@@ -417,7 +417,7 @@ function ReviewsTab() {
                   </svg>
                 ))}
               </div>
-              <Badge tone={r.type === "positive" ? "success" : "muted"}>{r.type === "positive" ? "SENT TO GOOGLE" : "PRIVATE"}</Badge>
+              <Badge tone={r.type === "positive" ? "success" : "muted"}>{r.type === "positive" ? "REVIEW WRITTEN" : "PRIVATE"}</Badge>
             </div>
             <p style={{ fontSize: 14, margin: "0 0 6px" }}>{r.type === "positive" ? r.review_text || "(review generated)" : r.comment || "(no comment left)"}</p>
             {r.phone && <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 6px" }}>Contact: {r.phone}</p>}

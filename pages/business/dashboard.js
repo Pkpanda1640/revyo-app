@@ -213,6 +213,7 @@ function AiSettingsTab({ client, updateClient, isPremium, goBilling }) {
   const [sampleReply, setSampleReply] = useState("");
   const [generating, setGenerating] = useState(false);
   const languages = client.languages || ["English"];
+  const reviewMode = client.review_mode === "full" ? "full" : "own_words";
 
   function toggleLanguage(lang) {
     const has = languages.includes(lang);
@@ -235,6 +236,45 @@ function AiSettingsTab({ client, updateClient, isPremium, goBilling }) {
     <div style={{ maxWidth: 620 }}>
       <h2 className="display" style={{ fontSize: 22, marginBottom: 4 }}>AI review settings</h2>
       <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 8 }}>Controls how reviews are generated for customers, across all your outlets.</p>
+
+      <div style={{ padding: "18px 0", borderBottom: "1px solid var(--line)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <MessageSquare size={16} color="var(--primary)" />
+          <span style={{ fontWeight: 600, fontSize: 15 }}>Review style</span>
+        </div>
+        <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 10px" }}>
+          How happy customers (4–5 stars) get their review. Reviews a customer writes themselves look the most natural to Google; AI-written text is quicker for customers but can be filtered more often.
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {[
+            ["own_words", "Customer writes it", "Recommended. They type a line or two in their own words, with an optional suggestion if they're stuck."],
+            ["full", "AI writes a ready review", "One tap for the customer: the AI writes a complete review they can copy to Google."],
+          ].map(([value, title, desc]) => {
+            const active = reviewMode === value;
+            return (
+              <button
+                key={value}
+                onClick={() => updateClient({ review_mode: value })}
+                className="btn"
+                style={{
+                  flex: "1 1 220px",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  textAlign: "left",
+                  gap: 4,
+                  padding: "12px 14px",
+                  border: `1px solid ${active ? "var(--primary)" : "var(--line)"}`,
+                  background: active ? "var(--primary-soft)" : "#fff",
+                  color: "var(--ink)",
+                }}
+              >
+                <span style={{ fontWeight: 700, fontSize: 14, color: active ? "var(--primary)" : "var(--ink)" }}>{title}{active ? " ✓" : ""}</span>
+                <span style={{ fontWeight: 400, fontSize: 12, color: "var(--muted)" }}>{desc}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div style={{ padding: "18px 0", borderBottom: "1px solid var(--line)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>

@@ -16,6 +16,7 @@ create table if not exists clients (
   lead_gen_enabled boolean not null default false,
   custom_form_enabled boolean not null default false,
   custom_form_category text default '',
+  review_mode text not null default 'own_words' check (review_mode in ('own_words','full')),
   created_at timestamptz not null default now()
 );
 

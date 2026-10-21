@@ -48,7 +48,10 @@ function buildPrompt({ client, outlet, rating, highlight, recentTexts }) {
 // just in the frontend, so the filter can't be bypassed by calling the API directly.
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
-  const { clientId, outletId, rating, highlight, phone } = req.body || {};
+  // draft: true means "just suggest some text" — nothing is saved. Used by the
+  // "own words" flow, where the review is only saved when the customer actually
+  // continues to Google (see save-review.js).
+  const { clientId, outletId, rating, highlight, phone, draft } = req.body || {};
   if (!clientId || !outletId || !rating) return res.status(400).json({ error: "Missing fields." });
   if (rating < 4) return res.status(400).json({ error: "This endpoint is only for ratings of 4 or 5." });
 
@@ -97,17 +100,19 @@ export default async function handler(req, res) {
     }
   }
 
-  await supabaseAdmin.from("reviews").insert({
-    client_id: clientId,
-    outlet_id: outletId,
-    rating,
-    type: "positive",
-    review_text: reviewText,
-    phone: phone || "",
-  });
+  if (!draft) {
+    await supabaseAdmin.from("reviews").insert({
+      client_id: clientId,
+      outlet_id: outletId,
+      rating,
+      type: "positive",
+      review_text: reviewText,
+      phone: phone || "",
+    });
 
-  if (client.lead_gen_enabled && phone && phone.trim()) {
-    await supabaseAdmin.from("leads").insert({ client_id: clientId, outlet_id: outletId, phone: phone.trim(), rating });
+    if (client.lead_gen_enabled && phone && phone.trim()) {
+      await supabaseAdmin.from("leads").insert({ client_id: clientId, outlet_id: outletId, phone: phone.trim(), rating });
+    }
   }
 
   return res.status(200).json({ reviewText, googleReviewLink: outlet.google_review_link });

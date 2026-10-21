@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { ExternalLink } from "lucide-react";
@@ -18,6 +18,9 @@ export default function CustomerReviewPage() {
   const [googleLink, setGoogleLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [suggested, setSuggested] = useState(false);
+  const [suggestError, setSuggestError] = useState("");
+  const savedRef = useRef(false);
 
   useEffect(() => {
     if (!clientId || !outletId) return;
@@ -40,14 +43,24 @@ export default function CustomerReviewPage() {
   // link — it only ever goes to the private feedback form.
   function chooseRating(stars) {
     setRating(stars);
-    if (stars <= 3) setStage("negative-form");
-    else setStage(info.client.ai_form_enabled ? "ai-form" : "generating");
+    if (stars <= 3) {
+      setStage("negative-form");
+      return;
+    }
+    if (info.client.review_mode !== "full") {
+      // "Own words" flow: the customer writes the review themselves.
+      setGoogleLink(info.outlet.google_review_link || "");
+      setStage("own-words");
+      return;
+    }
+    setStage(info.client.ai_form_enabled ? "ai-form" : "generating");
   }
 
   useEffect(() => {
     if (stage === "generating") generate();
   }, [stage]);
 
+  // "Full" flow: the AI writes a ready-made review.
   async function generate() {
     setBusy(true);
     try {
@@ -63,17 +76,50 @@ export default function CustomerReviewPage() {
   async function submitAiForm() {
     setStage("generating");
   }
+
+  // "Own words" flow: optional help for customers who don't know what to write.
+  // draft:true means nothing is saved until they actually continue to Google.
+  async function suggest() {
+    setBusy(true);
+    setSuggestError("");
+    try {
+      const data = await api.post("/api/public/generate-review", {
+        clientId,
+        outletId,
+        rating,
+        highlight: suggested ? "" : reviewText.trim(),
+        draft: true,
+      });
+      setReviewText(data.reviewText);
+      setSuggested(true);
+    } catch (e) {
+      setSuggestError("Couldn't get a suggestion right now — you can still write your own.");
+    }
+    setBusy(false);
+  }
+
   async function submitNegative() {
     setBusy(true);
     await api.post("/api/public/submit-negative", { clientId, outletId, rating, comment, phone });
     setBusy(false);
     setStage("negative-thanks");
   }
+
   function copyAndGo() {
+    const ownWords = info && info.client.review_mode !== "full";
+    const link = googleLink || (info && info.outlet.google_review_link) || "";
     navigator.clipboard.writeText(reviewText).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
-    if (googleLink) window.open(googleLink, "_blank", "noopener,noreferrer");
+    if (link) window.open(link, "_blank", "noopener,noreferrer");
+    // Own-words flow: record what the customer took to Google (once per visit).
+    // Done after window.open so a slow network can never block the Google page.
+    if (ownWords && !savedRef.current) {
+      savedRef.current = true;
+      api.post("/api/public/save-review", { clientId, outletId, rating, reviewText, phone }).catch(() => {
+        savedRef.current = false;
+      });
+    }
   }
 
   if (info === undefined) {
@@ -96,6 +142,9 @@ export default function CustomerReviewPage() {
       </>
     );
   }
+
+  const canContinue = reviewText.trim().length >= 15;
+  const ownLink = googleLink || info.outlet.google_review_link || "";
 
   return (
     <>
@@ -139,6 +188,45 @@ export default function CustomerReviewPage() {
         <>
           <h2 className="display" style={{ fontSize: 22, margin: "0 0 10px" }}>Thank you.</h2>
           <p style={{ fontSize: 14, color: "var(--muted)" }}>The business has received your feedback.</p>
+        </>
+      )}
+
+      {stage === "own-words" && (
+        <>
+          <h2 className="display" style={{ fontSize: 22, margin: "0 0 8px" }}>Glad you enjoyed it!</h2>
+          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 14 }}>
+            Tell others about your visit in your own words — a line or two is perfect.
+          </p>
+          <textarea
+            className="input"
+            style={{ minHeight: 110, marginBottom: 6 }}
+            value={reviewText}
+            maxLength={1000}
+            onChange={(e) => setReviewText(e.target.value)}
+            placeholder="What did you like? What did you try or buy? How was the service?"
+          />
+          <p style={{ fontSize: 12, color: "var(--muted)", textAlign: "left", marginBottom: 14 }}>
+            Ideas: what you ordered or bought, the staff, the atmosphere, value for money.
+          </p>
+          {info.client.lead_gen_enabled && (
+            <input className="input" style={{ marginBottom: 14 }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number (optional, for offers)" />
+          )}
+          <Button variant="dark" style={{ width: "100%" }} disabled={!canContinue || !ownLink} onClick={copyAndGo}>
+            <ExternalLink size={14} /> {copied ? "Copied — opening Google…" : "Copy & Continue to Google"}
+          </Button>
+          {!canContinue && (
+            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Write a short sentence to continue.</p>
+          )}
+          {!ownLink && <p style={{ fontSize: 12, color: "var(--danger)", marginTop: 10 }}>This outlet hasn't connected a Google review link yet.</p>}
+          <button
+            type="button"
+            onClick={suggest}
+            disabled={busy}
+            style={{ marginTop: 16, background: "none", border: "none", color: "var(--primary)", fontSize: 13, cursor: busy ? "default" : "pointer", textDecoration: "underline" }}
+          >
+            {busy ? "Writing a suggestion…" : "Not sure what to write? Get a suggestion"}
+          </button>
+          {suggestError && <p style={{ fontSize: 12, color: "var(--danger)", marginTop: 8 }}>{suggestError}</p>}
         </>
       )}
 

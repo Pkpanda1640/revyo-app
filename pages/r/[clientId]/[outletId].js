@@ -105,7 +105,7 @@ export default function CustomerReviewPage() {
     setStage("negative-thanks");
   }
 
-  function copyAndGo() {
+  function copyReview() {
     const ownWords = info && info.client.review_mode !== "full";
     // Only copies. The tap on the <a> link below opens Google as a normal
     // link, exactly like opening the link by hand.
@@ -211,9 +211,14 @@ export default function CustomerReviewPage() {
           {info.client.lead_gen_enabled && (
             <input className="input" style={{ marginBottom: 14 }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number (optional, for offers)" />
           )}
-          <a href={ownLink} target="_blank" rel="noopener noreferrer" onClick={copyAndGo} aria-disabled={!canContinue || !ownLink} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", boxSizing: "border-box", padding: "13px 16px", borderRadius: 12, background: "#111", color: "#fff", fontWeight: 600, fontSize: 15, textDecoration: "none", opacity: !canContinue || !ownLink ? 0.4 : 1, pointerEvents: !canContinue || !ownLink ? "none" : "auto" }}>
-            <ExternalLink size={14} /> {copied ? "Copied — opening Google…" : "Copy & Continue to Google"}
-          </a>
+          <>
+            <Button variant="dark" style={{ width: "100%", marginBottom: 10 }} disabled={!canContinue} onClick={copyReview}>
+              {copied ? "Copied ✓" : "Step 1: Copy my review"}
+            </Button>
+            <a href={ownLink || "#"} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", boxSizing: "border-box", padding: "13px 16px", borderRadius: 12, border: "2px solid #111", color: "#111", fontWeight: 600, fontSize: 15, textDecoration: "none" }}>
+              <ExternalLink size={14} /> Step 2: Open Google and paste
+            </a>
+          </>
           {!canContinue && (
             <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Write a short sentence to continue.</p>
           )}
@@ -284,9 +289,14 @@ export default function CustomerReviewPage() {
           <h2 className="display" style={{ fontSize: 22, margin: "0 0 8px" }}>Here's a review you can post</h2>
           <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>Make it your own — change a few words or add a detail from your visit before you post.</p>
           <textarea className="input" style={{ minHeight: 110, marginBottom: 14 }} value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
-          <a href={googleLink || info.outlet.google_review_link || "#"} target="_blank" rel="noopener noreferrer" onClick={copyAndGo} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", boxSizing: "border-box", padding: "13px 16px", borderRadius: 12, background: "#111", color: "#fff", fontWeight: 600, fontSize: 15, textDecoration: "none" }}>
-            <ExternalLink size={14} /> {copied ? "Copied — opening Google…" : "Copy & Continue to Google"}
-          </a>
+          <>
+            <Button variant="dark" style={{ width: "100%", marginBottom: 10 }} disabled={false} onClick={copyReview}>
+              {copied ? "Copied ✓" : "Step 1: Copy my review"}
+            </Button>
+            <a href={googleLink || info.outlet.google_review_link || "#"} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", boxSizing: "border-box", padding: "13px 16px", borderRadius: 12, border: "2px solid #111", color: "#111", fontWeight: 600, fontSize: 15, textDecoration: "none" }}>
+              <ExternalLink size={14} /> Step 2: Open Google and paste
+            </a>
+          </>
           {!googleLink && <p style={{ fontSize: 12, color: "var(--danger)", marginTop: 10 }}>This outlet hasn't connected a Google review link yet.</p>}
         </>
       )}

@@ -28,9 +28,9 @@ function buildPrompt({ client, outlet, rating, highlight, recentTexts }) {
     "value for money",
     "how quick and easy the visit was",
     "why they would come back or recommend it to friends",
-    "the occasion they came for (a casual outing, a family meal, a quick stop, etc.)",
+    "the overall experience in a simple, general way",
   ]);
-  const length = pick(["one short sentence", "two sentences", "two or three sentences", "three sentences"]);
+  const length = pick(["one short sentence", "one short sentence", "two short sentences", "two sentences"]);
   const tone = pick(["casual and chatty", "polite and simple", "warm and enthusiastic", "brief and matter-of-fact"]);
 
   const recentPart = recentTexts.length
@@ -40,7 +40,7 @@ function buildPrompt({ client, outlet, rating, highlight, recentTexts }) {
         .join("\n")}\n`
     : "";
 
-  return `A customer just visited "${outlet.name}". ${categoryPart} They rated their visit ${rating} out of 5 stars. ${highlightPart} Write a natural, first-person Google review of ${length}, in a ${tone} tone, that focuses on ${angle}. It should sound like a real person typed it quickly on their phone, not like an advertisement. If it fits naturally, you may mention: ${usedKeywords.join(", ")} — but do not list items. Do NOT start with "Had a great", "Visited", "Stopped by", "Great", or "Amazing", and do not mention "family" unless the customer did. ${langPart}${recentPart} Return ONLY the review text — no quotes, no preamble.`;
+  return `A customer just visited "${outlet.name}". ${categoryPart} They rated their visit ${rating} out of 5 stars. ${highlightPart} Write a natural, first-person Google review of ${length}, in a ${tone} tone, that focuses on ${angle}. It should sound like a real person typed it quickly on their phone, not like an advertisement. If it fits naturally, you may mention: ${usedKeywords.join(", ")} — but do not list items. Stay general and believable: do NOT invent specific dishes, products, prices, staff names, times of day, occasions or events that were not given to you, and do not claim anything the customer did not say (for example "breakfast", "a busy workday" or "my favourite spot"). Keep the details vague enough that any real customer could have written it. Do NOT start with "Had a great", "Visited", "Stopped by", "Great", or "Amazing", and do not mention "family" unless the customer did. ${langPart}${recentPart} Return ONLY the review text — no quotes, no preamble.`;
 }
 
 // Only ratings of 4 or 5 should ever reach this route — it's the one that

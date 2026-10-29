@@ -17,7 +17,6 @@ export default function CustomerReviewPage() {
   const [reviewText, setReviewText] = useState("");
   const [googleLink, setGoogleLink] = useState("");
   const [copied, setCopied] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [suggested, setSuggested] = useState(false);
   const [suggestError, setSuggestError] = useState("");
@@ -106,31 +105,47 @@ export default function CustomerReviewPage() {
     setStage("negative-thanks");
   }
 
-  // Copies the Google review link so the customer can paste it into their own
-  // browser tab, instead of us opening Google from this page.
-  function copyLink() {
+  // One tap: copy the review, WAIT until the copy has finished, then go to
+  // Google in this same tab. (Opening Google before the copy completed was the
+  // old behaviour.)
+  async function continueToGoogle() {
+    if (busy) return;
+    const ownWords = info && info.client.review_mode !== "full";
     const link = googleLink || (info && info.outlet.google_review_link) || "";
     if (!link) return;
-    navigator.clipboard.writeText(link).catch(() => {});
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 3000);
-  }
-
-  function copyReview() {
-    const ownWords = info && info.client.review_mode !== "full";
-    // Only copies. The tap on the <a> link below opens Google as a normal
-    // link, exactly like opening the link by hand.
-    navigator.clipboard.writeText(reviewText).catch(() => {});
+    setBusy(true);
+    try {
+      await navigator.clipboard.writeText(reviewText);
+    } catch (e) {
+      // Fallback for browsers that block the clipboard API.
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = reviewText;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch (e2) {}
+    }
     setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-    // Own-words flow: record what the customer took to Google (once per visit).
-    // Fire-and-forget, so a slow network can never block the Google page.
     if (ownWords && !savedRef.current) {
       savedRef.current = true;
-      api.post("/api/public/save-review", { clientId, outletId, rating, reviewText, phone }).catch(() => {
+      try {
+        // Don't let a slow network hold the customer up for more than ~0.8s.
+        await Promise.race([
+          api.post("/api/public/save-review", { clientId, outletId, rating, reviewText, phone }),
+          new Promise((resolve) => setTimeout(resolve, 800)),
+        ]);
+      } catch (e) {
         savedRef.current = false;
-      });
+      }
     }
+    window.location.assign(link);
+    // If the customer comes back with the Back button, make the page usable again.
+    setTimeout(() => setBusy(false), 1500);
   }
 
   if (info === undefined) {
@@ -222,20 +237,10 @@ export default function CustomerReviewPage() {
           {info.client.lead_gen_enabled && (
             <input className="input" style={{ marginBottom: 14 }} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number (optional, for offers)" />
           )}
-          <>
-            <Button variant="dark" style={{ width: "100%", marginBottom: 6 }} disabled={!ownLink} onClick={copyLink}>
-              {linkCopied ? "Google link copied ✓" : "Step 1: Copy the Google link"}
-            </Button>
-            <p style={{ fontSize: 13, color: "var(--muted)", textAlign: "left", lineHeight: 1.5, margin: "0 0 14px" }}>
-              Open a new browser tab (or Google Maps) and paste the link there. Then come back here.
-            </p>
-            <Button variant="dark" style={{ width: "100%", marginBottom: 6 }} disabled={!canContinue} onClick={copyReview}>
-              {copied ? "Review copied ✓" : "Step 2: Copy my review"}
-            </Button>
-            <p style={{ fontSize: 13, color: "var(--muted)", textAlign: "left", lineHeight: 1.5, margin: 0 }}>
-              Go back to the Google page, paste your review and post it.
-            </p>
-          </>
+          <Button variant="dark" style={{ width: "100%" }} disabled={!canContinue || !ownLink || busy} onClick={continueToGoogle}>
+            <ExternalLink size={14} /> {copied ? "Copied — opening Google…" : "Copy & Continue to Google"}
+          </Button>
+          <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Your review is copied for you. Paste it on the Google page and tap Post.</p>
           {!canContinue && (
             <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Write a short sentence to continue.</p>
           )}
@@ -306,20 +311,10 @@ export default function CustomerReviewPage() {
           <h2 className="display" style={{ fontSize: 22, margin: "0 0 8px" }}>Here's a review you can post</h2>
           <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>Make it your own — change a few words or add a detail from your visit before you post.</p>
           <textarea className="input" style={{ minHeight: 110, marginBottom: 14 }} value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
-          <>
-            <Button variant="dark" style={{ width: "100%", marginBottom: 6 }} disabled={!(googleLink || info.outlet.google_review_link)} onClick={copyLink}>
-              {linkCopied ? "Google link copied ✓" : "Step 1: Copy the Google link"}
-            </Button>
-            <p style={{ fontSize: 13, color: "var(--muted)", textAlign: "left", lineHeight: 1.5, margin: "0 0 14px" }}>
-              Open a new browser tab (or Google Maps) and paste the link there. Then come back here.
-            </p>
-            <Button variant="dark" style={{ width: "100%", marginBottom: 6 }} disabled={false} onClick={copyReview}>
-              {copied ? "Review copied ✓" : "Step 2: Copy my review"}
-            </Button>
-            <p style={{ fontSize: 13, color: "var(--muted)", textAlign: "left", lineHeight: 1.5, margin: 0 }}>
-              Go back to the Google page, paste your review and post it.
-            </p>
-          </>
+          <Button variant="dark" style={{ width: "100%" }} disabled={!(googleLink || info.outlet.google_review_link) || busy} onClick={continueToGoogle}>
+            <ExternalLink size={14} /> {copied ? "Copied — opening Google…" : "Copy & Continue to Google"}
+          </Button>
+          <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Your review is copied for you. Paste it on the Google page and tap Post.</p>
           {!googleLink && <p style={{ fontSize: 12, color: "var(--danger)", marginTop: 10 }}>This outlet hasn't connected a Google review link yet.</p>}
         </>
       )}
